@@ -144,23 +144,21 @@ function onInputChange(e) {
     const input = e.target;
     const val = input.value.trim();
 
-    if (!/^[1-9]$/.test(val)) {
-        input.value = '';
-        return;
-    }
-
     const row = parseInt(input.dataset.row, 10);
     const col = parseInt(input.dataset.col, 10);
+
+    if (val === '' || !/^[1-9]$/.test(val)) {
+        input.value = '';
+        gameRef.child("moves").child(`${row}_${col}`).remove(); // 🔥 Sync deletion
+        return;
+    }
 
     gameRef.child("moves").child(`${row}_${col}`).set({
         value: val,
         player: playerNumber
     });
-
-    // if (isPuzzleComplete()) {
-    //     gameRef.child("status").set("completed");
-    // }
 }
+
 
 function isPuzzleComplete() {
     const inputs = document.querySelectorAll('#output input');
