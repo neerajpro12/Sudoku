@@ -164,6 +164,7 @@ function addInputListeners() {
     const inputs = document.querySelectorAll('#output input:not([readonly])');
     inputs.forEach(input => {
         input.addEventListener('input', onInputChange);
+        input.addEventListener('keyup', onInputChange); // ✅ catch backspace/delete
     });
 }
 
