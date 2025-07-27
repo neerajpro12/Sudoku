@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sudoku Game</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <style>
+        table {
+            margin: auto;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        td input {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            font-size: 18px;
+            border: none;
+        }
+
+        td input[readonly] {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        td {
+            padding: 0;
+            border: 1px solid #ccc;
+        }
+
+        .thick-border-top {
+            border-top: 3px solid #000 !important;
+        }
+
+        .thick-border-left {
+            border-left: 3px solid #000 !important;
+        }
+
+        .thick-border-right {
+            border-right: 3px solid #000 !important;
+        }
+
+        .thick-border-bottom {
+            border-bottom: 3px solid #000 !important;
+        }
+
+        #api-link-footer {
+            position: static;
+            /* or just remove position property */
+            width: 100%;
+            background-color: #f8f9fa;
+            text-align: center;
+            padding: 10px 0;
+            border-top: 1px solid #ddd;
+            font-size: 16px;
+            /* Remove z-index since no longer fixed */
+        }
+
+        #api-link-footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        #api-link-footer a:hover {
+            text-decoration: underline;
+        }
+
+        #completion-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            cursor: pointer;
+        }
+
+        #completion-message {
+            background: white;
+            padding: 30px 50px;
+            border-radius: 12px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+            /* Bootstrap green */
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
+        }
+
+        /* Remove container bottom padding */
+        .container {
+            padding-bottom: 0;
+        }
+
+        .player1 {
+            background-color: #e0f7fa;
+        }
+
+        .player2 {
+            background-color: #ffe0b2;
+        }
+
+        .wrong {
+            border: 2px solid red;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+     <!-- FirebaseSDKs FIRST -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <!-- Firebase CONFIG + Init -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJKG8sWnJDzEKR5zcyT6z9kzOwu1jEnCI",
+            authDomain: "sudoku-mp2.firebaseapp.com",
+            databaseURL: "https://sudoku-mp2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sudoku-mp2",
+            storageBucket: "sudoku-mp2.firebasestorage.app",
+            messagingSenderId: "582727244145",
+            appId: "1:582727244145:web:da1831cd0d01a9d89abed0"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        //Make firebase available globally
+        window.firebase = firebase;
+        
+        //const db = firebase.database();
+    </script>
+
+    <div class="container py-4">
+        <header class="mb-4 border-bottom pb-2">
+            <h1 class="text-center text-primary">🧩 Sudoku Game</h1>
+        </header>
+
+        <div class="text-center mb-3">
+            <!-- <button class="btn btn-outline-primary me-2" onclick="document.getElementById('z').innerHTML = Date()">Show
+                Date</button> -->
+            <button class="btn btn-primary" onclick="getSudoku()">Get a Sudoku Puzzle</button>
+        </div>
+
+        <p class="text-center text-muted" id="z"></p>
+
+        <div id="output" class="text-center"></div>
+        <div id="buttons" class="text-center mt-3"></div>
+    </div>
+
+    <div id="completion-overlay" style="display:none;">
+        <div id="completion-message">🎉 Completed! 🎉</div>
+    </div>
+
+
+    <div id="api-link-footer">
+        <a href="https://sudoku-api.vercel.app/" target="_blank" rel="noopener noreferrer">
+            Sudoku API Link
+        </a>
+    </div>
+
+   
+    <script src="script.js"></script>
+</body>
+
+</html>
