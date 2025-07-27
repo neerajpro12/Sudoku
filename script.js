@@ -118,7 +118,10 @@ function displaySudokuGrid(grid) {
 }
 
 function listenForMoves() {
-    gameRef.child("moves").on("child_added", snapshot => {
+    const movesRef = gameRef.child("moves");
+
+    // When a number is added or changed
+    movesRef.on("child_added", snapshot => {
         const [row, col] = snapshot.key.split("_").map(Number);
         const data = snapshot.val();
         const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
@@ -128,9 +131,34 @@ function listenForMoves() {
             input.style.backgroundColor = playerNumber === data.player ? "#e0f7fa" : "#ffe0b2";
             input.style.color = "#000";
         }
+    });
 
+    // ✅ NEW: When a number is deleted
+    movesRef.on("child_removed", snapshot => {
+        const [row, col] = snapshot.key.split("_").map(Number);
+        const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
+
+        if (input) {
+            input.value = '';                    // Clear the input box
+            input.style.backgroundColor = '';    // Reset styles
+            input.style.color = '';
+        }
+    });
+
+    // ✅ OPTIONAL: If you want to track edits too
+    movesRef.on("child_changed", snapshot => {
+        const [row, col] = snapshot.key.split("_").map(Number);
+        const data = snapshot.val();
+        const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
+        
+        if (input) {
+            input.value = data.value;
+            input.style.backgroundColor = playerNumber === data.player ? "#e0f7fa" : "#ffe0b2";
+            input.style.color = "#000";
+        }
     });
 }
+
 
 function addInputListeners() {
     const inputs = document.querySelectorAll('#output input:not([readonly])');
@@ -149,7 +177,7 @@ function onInputChange(e) {
 
     if (val === '' || !/^[1-9]$/.test(val)) {
         input.value = '';
-        gameRef.child("moves").child(`${row}_${col}`).remove(); // 🔥 Sync deletion
+        gameRef.child("moves").child(`${row}_${col}`).remove(); // Sync deletion
         return;
     }
 
