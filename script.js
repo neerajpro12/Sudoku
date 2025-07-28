@@ -1,55 +1,77 @@
-let gameId = new URLSearchParams(window.location.search).get("game");
-if (!gameId) {
-    gameId = prompt("Enter a Game ID to join or create:");
-    window.location.search = "?game=" + gameId;
-}
-const gameRef = firebase.database().ref("games/" + gameId);
 
+let firebaseEnable = true;
+
+
+let gameRef = null;
 let playerNumber = null;
 
-// Assign Player 1 or 2
-gameRef.child("players").once("value", snapshot => {
-    const players = snapshot.val() || {};
-    if (!players.player1) {
-        playerNumber = 1;
-        const playerRef = gameRef.child("players/player1");
-        playerRef.set(true);
-        playerRef.onDisconnect().remove();
-    } else if (!players.player2) {
-        playerNumber = 2;
-        const playerRef = gameRef.child("players/player2");
-        playerRef.set(true);
-        playerRef.onDisconnect().remove();
-    } else {
-        alert("Game is full.");
+let gameId = new URLSearchParams(window.location.search).get("game");
+
+if (!gameId) {
+    gameId = prompt("Enter a Game ID to join or type 'offline' for local mode:")?.trim().toLowerCase();
+
+    if (gameId === "offline") {
+        firebaseEnable = false;
+    } else if (gameId) {
+        firebaseEnable = true;
+        window.history.replaceState(null, "", "?game=" + encodeURIComponent(gameId));
     }
-});
+}
+
+if (firebaseEnable) {
+    gameRef = firebase.database().ref("games/" + gameId);
+
+    playerNumber = null;
+
+    // Assign Player 1 or 2
+    gameRef.child("players").once("value", snapshot => {
+        const players = snapshot.val() || {};
+        if (!players.player1) {
+            playerNumber = 1;
+            const playerRef = gameRef.child("players/player1");
+            playerRef.set(true);
+            playerRef.onDisconnect().remove();
+        } else if (!players.player2) {
+            playerNumber = 2;
+            const playerRef = gameRef.child("players/player2");
+            playerRef.set(true);
+            playerRef.onDisconnect().remove();
+        } else {
+            alert("Game is full.");
+        }
+    });
+}
 
 let stat = 'puzzle';
 let currentSolution = null;
 
-gameRef.child("puzzle").on("value", snapshot => {
-    const data = snapshot.val();
-    if (data) {
-        currentSolution = data.solution;
-        stat = 'puzzle';
+if (firebaseEnable) {
+    gameRef.child("puzzle").on("value", snapshot => {
+        const data = snapshot.val();
+        if (data) {
+            currentSolution = data.solution;
+            stat = 'puzzle';
 
-        displaySudokuGrid(data.value);
-        showButton();
-        addInputListeners();
+            displaySudokuGrid(data.value);
+            showButton();
+            addInputListeners();
 
-        document.getElementById('z').textContent = `Difficulty: ${data.difficulty || 'Unknown'}`;
-    }
-});
+            document.getElementById('z').textContent = `Difficulty: ${data.difficulty || 'Unknown'}`;
+        }
+    });
+}
+
 
 function getSudoku() {
-    if (playerNumber !== 1) {
-        alert("You can't generate a puzzle!");
-        return;
+    if (firebaseEnable) {
+        if (playerNumber !== 1) {
+            alert("You can't generate a puzzle!");
+            return;
+        }
+        gameRef.child("moves").remove();
+        gameRef.child("puzzle").remove();
+        gameRef.child("status").set("in_progress");
     }
-    gameRef.child("moves").remove();
-    gameRef.child("puzzle").remove();
-    gameRef.child("status").set("in_progress");
 
 
     fetch('https://sudoku-api.vercel.app/api/dosuku')
@@ -62,18 +84,23 @@ function getSudoku() {
             currentSolution = gridData.solution;
             // stat = 'puzzle';
 
-            gameRef.child("puzzle").set({
-                value: puzzle,
-                solution: currentSolution,
-                difficulty: difficulty
-            });
+            if (firebaseEnable) {
+                gameRef.child("puzzle").set({
+                    value: puzzle,
+                    solution: currentSolution,
+                    difficulty: difficulty
+                });
+            }
 
-            // displaySudokuGrid(puzzle);
-            // showButton();
-            // addInputListeners();
+            if (!firebaseEnable) {
+                stat = 'puzzle';
 
-            // document.getElementById('z').textContent = `Difficulty: ${difficulty}`;
+                displaySudokuGrid(puzzle);
+                showButton();
+                addInputListeners();
 
+                document.getElementById('z').textContent = `Difficulty: ${difficulty || 'Unknown'}`;
+            }
 
         })
         .catch(error => {
@@ -91,72 +118,75 @@ function displaySudokuGrid(grid) {
             const value = grid[i][j];
             const isPreFilled = value !== 0;
 
-            // Add thick borders for 3x3 blocks
+            // Determine class names for borders
             const classes = [];
             if (i % 3 === 0) classes.push('thick-border-top');
             if (i === 8) classes.push('thick-border-bottom');
             if (j % 3 === 0) classes.push('thick-border-left');
             if (j === 8) classes.push('thick-border-right');
 
+            // Add cell-type-specific class
+            classes.push(isPreFilled ? 'readonly-cell-td' : 'editable-cell-td');
+
             html += `<td class="${classes.join(' ')}">
-                    <input 
-                        type="text" 
-                        maxlength="1"
-                        data-row="${i}" data-col="${j}"
-                        value="${isPreFilled ? value : ''}" 
-                        ${isPreFilled ? 'readonly' : ''}
-                        class="${isPreFilled ? 'readonly-cell' : ''}"
-                    />
-                </td>`;
+                <input 
+                    type="text" 
+                    maxlength="1"
+                    data-row="${i}" 
+                    data-col="${j}"
+                    value="${isPreFilled ? value : ''}" 
+                    ${isPreFilled ? 'readonly' : ''}
+                    class="${isPreFilled ? 'readonly-cell' : 'editable-cell'}"
+                />
+            </td>`;
         }
         html += '</tr>';
     }
     html += '</table>';
-    console.log(html);
     document.getElementById('output').innerHTML = html;
-    listenForMoves();
+    
+    if (typeof firebaseEnable !== 'undefined' && firebaseEnable) {
+        listenForMoves();
+    }
 }
 
-function listenForMoves() {
-    const movesRef = gameRef.child("moves");
 
-    // When a number is added or changed
-    movesRef.on("child_added", snapshot => {
+//listenForMoves()
+if (firebaseEnable) {
+    function listenForMoves() {
+        const movesRef = gameRef.child("moves");
+
+        // For new entries
+        movesRef.on("child_added", updateInput);
+
+        // For changed entries (e.g. overwriting a move)
+        movesRef.on("child_changed", updateInput);
+
+        // For removed entries (deleting a number)
+        movesRef.on("child_removed", snapshot => {
+            const [row, col] = snapshot.key.split("_").map(Number);
+            const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
+            if (input) {
+                input.value = '';
+                input.style.backgroundColor = '';
+                input.style.color = '';
+            }
+        });
+    }
+}
+
+//updateInput()
+if (firebaseEnable) {
+    function updateInput(snapshot) {
         const [row, col] = snapshot.key.split("_").map(Number);
         const data = snapshot.val();
         const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
-
         if (input) {
             input.value = data.value;
             input.style.backgroundColor = playerNumber === data.player ? "#e0f7fa" : "#ffe0b2";
             input.style.color = "#000";
         }
-    });
-
-    // ✅ NEW: When a number is deleted
-    movesRef.on("child_removed", snapshot => {
-        const [row, col] = snapshot.key.split("_").map(Number);
-        const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
-
-        if (input) {
-            input.value = '';                    // Clear the input box
-            input.style.backgroundColor = '';    // Reset styles
-            input.style.color = '';
-        }
-    });
-
-    // ✅ OPTIONAL: If you want to track edits too
-    movesRef.on("child_changed", snapshot => {
-        const [row, col] = snapshot.key.split("_").map(Number);
-        const data = snapshot.val();
-        const input = document.querySelector(`input[data-row="${row}"][data-col="${col}"]`);
-        
-        if (input) {
-            input.value = data.value;
-            input.style.backgroundColor = playerNumber === data.player ? "#e0f7fa" : "#ffe0b2";
-            input.style.color = "#000";
-        }
-    });
+    }
 }
 
 
@@ -164,7 +194,6 @@ function addInputListeners() {
     const inputs = document.querySelectorAll('#output input:not([readonly])');
     inputs.forEach(input => {
         input.addEventListener('input', onInputChange);
-        input.addEventListener('keyup', onInputChange); // ✅ catch backspace/delete
     });
 }
 
@@ -178,14 +207,16 @@ function onInputChange(e) {
 
     if (val === '' || !/^[1-9]$/.test(val)) {
         input.value = '';
-        gameRef.child("moves").child(`${row}_${col}`).remove(); // Sync deletion
+        if (firebaseEnable) { gameRef.child("moves").child(`${row}_${col}`).remove(); } // Sync deletion 
         return;
     }
 
-    gameRef.child("moves").child(`${row}_${col}`).set({
-        value: val,
-        player: playerNumber
-    });
+    if (firebaseEnable) {
+        gameRef.child("moves").child(`${row}_${col}`).set({
+            value: val,
+            player: playerNumber
+        });
+    }
 }
 
 
@@ -221,21 +252,21 @@ function showButton() {
     const toggleButton = document.createElement('button');
     toggleButton.className = 'btn btn-success me-2';
 
-    if (stat === 'puzzle') {
-        toggleButton.textContent = 'Show Solution';
-        toggleButton.disabled = true;
-        toggleButton.onclick = () => {
-            displaySudokuGrid(currentSolution);
-            stat = 'solution';
-            showButton();
-        };
-    } else {
-        toggleButton.textContent = 'Get New Puzzle';
-        toggleButton.onclick = () => {
-            getSudoku();
-        };
-    }
-    buttonContainer.appendChild(toggleButton);
+    // if (stat === 'puzzle') {
+    //     toggleButton.textContent = 'Show Solution';
+    //     toggleButton.disabled = true;
+    //     toggleButton.onclick = () => {
+    //         displaySudokuGrid(currentSolution);
+    //         stat = 'solution';
+    //         showButton();
+    //     };
+    // } else {
+    //     toggleButton.textContent = 'Get New Puzzle';
+    //     toggleButton.onclick = () => {
+    //         getSudoku();
+    //     };
+    // }
+    // buttonContainer.appendChild(toggleButton);
 
     // New button: Check Current Solution
     if (stat === 'puzzle') {
@@ -278,14 +309,27 @@ function checkSolution() {
 
     if (allCorrect) {
         alert('Congratulations! All numbers are correct!');
-        gameRef.child("status").set("completed");
+        if (firebaseEnable) { gameRef.child("status").set("completed"); }
     } else {
         alert('Some numbers are incorrect or missing. Please fix them.');
     }
 }
 
-gameRef.child("status").on("value", snapshot => {
-    if (snapshot.val() === "completed") {
-        showCompletionOverlay();
-    }
-})
+if (firebaseEnable && gameRef) {
+    gameRef.child("status").on("value", snapshot => {
+        if (snapshot.val() === "completed") {
+            showCompletionOverlay();
+        }
+    })
+}
+
+if (!firebaseEnable) {
+    const note = document.createElement("p");
+    note.className = "text-center text-danger";
+    note.textContent = "⚠ Running in Local Mode - Multiplayer is disabled";
+    document.querySelector('.container').appendChild(note);
+}
+
+
+
+
