@@ -111,33 +111,14 @@
             border: 2px solid red;
         }
     </style>
+
 </head>
 
 <body class="bg-light">
 
-     <!-- FirebaseSDKs FIRST -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    <!-- Firebase CONFIG + Init -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDJKG8sWnJDzEKR5zcyT6z9kzOwu1jEnCI",
-            authDomain: "sudoku-mp2.firebaseapp.com",
-            databaseURL: "https://sudoku-mp2-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "sudoku-mp2",
-            storageBucket: "sudoku-mp2.firebasestorage.app",
-            messagingSenderId: "582727244145",
-            appId: "1:582727244145:web:da1831cd0d01a9d89abed0"
-        };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        //Make firebase available globally
-        window.firebase = firebase;
-        
-        //const db = firebase.database();
-    </script>
+    
 
     <div class="container py-4">
         <header class="mb-4 border-bottom pb-2">
@@ -154,11 +135,14 @@
 
         <div id="output" class="text-center"></div>
         <div id="buttons" class="text-center mt-3"></div>
+</div>
     </div>
 
     <div id="completion-overlay" style="display:none;">
         <div id="completion-message">🎉 Completed! 🎉</div>
     </div>
+
+
 
 
     <div id="api-link-footer">
@@ -167,8 +151,8 @@
         </a>
     </div>
 
-   
-    <script src="script.js"></script>
+
+    <script type="module" src="script.js"></script>
 </body>
 
 </html>
